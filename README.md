@@ -39,8 +39,6 @@ go get github.com/catgoose/dio
 1. Import `Dio` and read environment. Dio will `log.Fatalf` if environment
    variable is not set
 
-You must call `flag.Parse()` after you have defined your own flags.
-
 ```go
 package main
 
