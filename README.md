@@ -23,7 +23,7 @@ go run main.go -env production
 ## Installation
 
 ```bash
-go get github.com/yourusername/dio
+go get github.com/catgoose/dio
 ```
 
 ## Usage
