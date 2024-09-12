@@ -1,8 +1,16 @@
 # Dio
 
+<!--toc:start-->
+
+- [Dio](#dio)
+  - [About](#about)
+  - [Installation](#installation)
+  - [Usage](#usage)
+  <!--toc:end-->
+
 _You thought it was a README, but it was me, Dio._
 
-![image](https://github.com/catgoose/dio/blob/dfa2af28f877bc5054b4b599ca7a0cb2a060d252/dio.png)
+![image](https://github.com/catgoose/screenshots/blob/b2cf4ef1674f99e894552af2c5cf654062ba4e37/dio/dio.png)
 
 ## About
 
