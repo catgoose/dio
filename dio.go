@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"strconv"
 
 	"github.com/joho/godotenv"
 )
@@ -49,7 +50,12 @@ func printEnvMode(mode string) {
 	if prodRegex.MatchString(mode) {
 		color = red
 	}
-	fmt.Printf("%sApplication mode: %s%s\n", color, mode, reset)
+	pr := Env("DIO_PRINT_MODE")
+
+	// Default to printing unless explicitly set to "false"
+	if doPrint, err := strconv.ParseBool(pr); err != nil || doPrint {
+		fmt.Printf("%sApplication mode: %s%s\n", color, mode, reset)
+	}
 }
 
 // Name returns the current environment name

@@ -76,4 +76,6 @@ go run main.go -env=production
 go run main.go -env production
 ```
 
-Neovim btw
+### Environment
+
+To disable printing `Application mode: ...` set environment variable `DIO_PRINT_MODE=false`
