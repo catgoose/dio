@@ -45,15 +45,14 @@ func loadEnvFile(mode string) error {
 
 // printEnvMode prints the current application mode with appropriate color.
 func printEnvMode(mode string) {
-	prodRegex := regexp.MustCompile(`^prod.*`)
-	color := blue
-	if prodRegex.MatchString(mode) {
-		color = red
-	}
 	pr := Env("DIO_PRINT_MODE")
-
 	// Default to printing unless explicitly set to "false"
 	if doPrint, err := strconv.ParseBool(pr); err != nil || doPrint {
+		prodRegex := regexp.MustCompile(`^prod.*`)
+		color := blue
+		if prodRegex.MatchString(mode) {
+			color = red
+		}
 		fmt.Printf("%sApplication mode: %s%s\n", color, mode, reset)
 	}
 }
