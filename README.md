@@ -39,6 +39,8 @@ go get github.com/catgoose/dio
 1. Import `Dio` and read environment. Dio will `log.Fatalf` if environment
    variable is not set
 
+You must call `flag.Parse()` after you have defined your own flags.
+
 ```go
 package main
 
@@ -48,6 +50,8 @@ import (
 )
 
 func main() {
+ // Parse the flags set by dio (-env)
+ flag.Parse()
  // Dio loads the environment based on the flag passed (e.g., `-env=production,-env development`)
  // Default mode is `development`
  fmt.Println("Current environment:", dio.Name())

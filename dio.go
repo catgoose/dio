@@ -21,7 +21,6 @@ const (
 
 func init() {
 	flag.StringVar(&env, "env", "development", "Set the application environment (reads environment from .env.{mode})")
-	flag.Parse()
 
 	if err := loadEnvFile(env); err != nil {
 		log.Fatalf("Failed to load environment: %v", err)
