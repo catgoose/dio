@@ -35,9 +35,9 @@ func loadEnvFile(mode string) error {
 	err := godotenv.Load(file)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return fmt.Errorf("No environment file found for mode: %s", mode)
+			return fmt.Errorf("no environment file found for mode: %s", mode)
 		}
-		return fmt.Errorf("Error loading environment file (%s): %w", file, err)
+		return fmt.Errorf("error loading environment file (%s): %w", file, err)
 	}
 	return nil
 }
@@ -61,13 +61,17 @@ func Name() string {
 	return env
 }
 
-// Env retrieves the value of the specified environment variable
-func Env(key string) string {
+// Env retrieves the value of the specified environment variable.
+// If not set, it uses the fallback value if provided, or returns an error if not.
+func Env(key string, fallback ...string) (string, error) {
 	value := os.Getenv(key)
 	if value == "" {
-		log.Fatalf("Environment variable %s is not set", key)
+		if len(fallback) > 0 {
+			return fallback[0], nil
+		}
+		return "", fmt.Errorf("environment variable %s is not set", key)
 	}
-	return value
+	return value, nil
 }
 
 // IsDev checks if the current environment is development
