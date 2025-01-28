@@ -1,12 +1,12 @@
 # Dio
 
 <!--toc:start-->
-
 - [Dio](#dio)
   - [About](#about)
   - [Installation](#installation)
   - [Usage](#usage)
-  <!--toc:end-->
+    - [Environment](#environment)
+<!--toc:end-->
 
 _You thought it was a README, but it was me, Dio._
 
@@ -80,4 +80,4 @@ go run main.go -env production
 
 ### Environment
 
-To disable printing `Application mode: ...` set environment variable `DIO_PRINT_MODE=false`
+To disable printing `Environment: ...` set environment variable `DIO_PRINT_ENV=false`
