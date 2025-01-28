@@ -11,7 +11,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
-var env string
+var envFlag = flag.String("env", "development", "Set the application environment (reads environment from .env.{mode})")
 
 const (
 	red   = "\033[31m"
@@ -19,14 +19,16 @@ const (
 	reset = "\033[0m"
 )
 
-func init() {
-	flag.StringVar(&env, "env", "development", "Set the application environment (reads environment from .env.{mode})")
+// InitEnvironment initializes the environment after the caller parses flags
+func InitEnvironment() {
+	// Use the parsed value of the environment flag
+	EnvFlag := *envFlag
 
-	if err := loadEnvFile(env); err != nil {
+	if err := loadEnvFile(EnvFlag); err != nil {
 		log.Fatalf("Failed to load environment: %v", err)
 	}
 
-	printEnvMode(env)
+	printEnvMode(EnvFlag)
 }
 
 // loadEnvFile loads the environment variables from the corresponding .env file
@@ -56,11 +58,6 @@ func printEnvMode(mode string) {
 	}
 }
 
-// Name returns the current environment name
-func Name() string {
-	return env
-}
-
 // Env retrieves the value of the specified environment variable.
 // If not set, it uses the fallback value if provided, or returns an error if not.
 func Env(key string, fallback ...string) (string, error) {
@@ -74,12 +71,18 @@ func Env(key string, fallback ...string) (string, error) {
 	return value, nil
 }
 
+// Name returns the current environment name
+func Name() string {
+	return *envFlag
+}
+
 // IsDev checks if the current environment is development
 func Dev() bool {
 	devRegex := regexp.MustCompile(`^dev.*`)
 	return devRegex.MatchString(Name())
 }
 
+// IsProd checks if the current environment is production
 func Prod() bool {
 	prodRegex := regexp.MustCompile(`^prod.*`)
 	return prodRegex.MatchString(Name())

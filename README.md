@@ -1,12 +1,12 @@
 # Dio
 
 <!--toc:start-->
+
 - [Dio](#dio)
   - [About](#about)
   - [Installation](#installation)
-  - [Usage](#usage)
-    - [Environment](#environment)
-<!--toc:end-->
+  - [Usage](#usage) - [Environment](#environment)
+  <!--toc:end-->
 
 _You thought it was a README, but it was me, Dio._
 
@@ -36,8 +36,7 @@ go get github.com/catgoose/dio
 .env.production
 ```
 
-1. Import `Dio` and read environment. Dio will `log.Fatalf` if environment
-   variable is not set
+1. Import `Dio` and read environment.
 
 ```go
 package main
@@ -48,10 +47,15 @@ import (
 )
 
 func main() {
+ // Set your own flags
  // Parse the flags set by dio (-env)
  flag.Parse()
  // Dio loads the environment based on the flag passed (e.g., `-env=production,-env development`)
  // Default mode is `development`
+
+ // Initialize environment after parsing flags
+ dio.InitEnvironment()
+
  fmt.Println("Current environment:", dio.Name())
 
  // Access environment variables
