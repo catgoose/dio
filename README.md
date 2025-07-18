@@ -1,11 +1,42 @@
 # Dio
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/catgoose/dio.svg)](https://pkg.go.dev/github.com/catgoose/dio)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 <!--toc:start-->
 
 - [Dio](#dio)
   - [About](#about)
   - [Installation](#installation)
-  - [Usage](#usage) - [Environment](#environment)
+  - [Quick Start](#quick-start)
+    - [1. Create your .env files](#1-create-your-env-files)
+    - [2. Basic Usage](#2-basic-usage)
+    - [3. Run with environment flag](#3-run-with-environment-flag)
+  - [API Reference](#api-reference)
+    - [Environment Initialization](#environment-initialization)
+      - [`InitEnvironment() error`](#initenvironment-error)
+      - [`InitEnvironmentWithEnv(env string) error`](#initenvironmentwithenvenv-string-error)
+    - [Environment Variable Access](#environment-variable-access)
+      - [`Env(key string, fallback ...string) (string, error)`](#envkey-string-fallback-string-string-error)
+      - [`MustEnv(key string) (string, error)`](#mustenvkey-string-string-error)
+      - [`EnvWithDefault(key, defaultValue string) string`](#envwithdefaultkey-defaultvalue-string-string)
+    - [Environment Information](#environment-information)
+      - [`Name() string`](#name-string)
+      - [`Dev() bool`](#dev-bool)
+      - [`Prod() bool`](#prod-bool)
+    - [Configuration](#configuration)
+      - [`SetEnvFilePattern(pattern string)`](#setenvfilepatternpattern-string)
+      - [`SetPrintEnvMode(enabled bool)`](#setprintenvmodeenabled-bool)
+  - [Error Handling](#error-handling)
+    - [Error Types](#error-types)
+    - [Error Handling Patterns](#error-handling-patterns)
+      - [Fail-Fast (Recommended for Applications)](#fail-fast-recommended-for-applications)
+      - [Graceful Handling (For Libraries)](#graceful-handling-for-libraries)
+  - [Examples](#examples)
+    - [Web Server Configuration](#web-server-configuration)
+    - [Database Configuration](#database-configuration)
+    - [Environment-Specific Behavior](#environment-specific-behavior)
+  - [License](#license)
   <!--toc:end-->
 
 _You thought it was a README, but it was me, Dio._
@@ -14,7 +45,7 @@ _You thought it was a README, but it was me, Dio._
 
 ## About
 
-Dio loads `.env.{mode}` environment files using [godotenv](https://github.com/joho/godotenv) as a dependency. Environment mode is set with commandline flags.
+Dio is a Go package that provides environment management utilities for applications. It loads `.env.{mode}` environment files using [godotenv](https://github.com/joho/godotenv) and follows a fail-fast approach - the application will exit if the specified environment file doesn't exist, preventing accidental deployment to the wrong environment.
 
 ```bash
 go run main.go -env production
@@ -26,82 +57,298 @@ go run main.go -env production
 go get github.com/catgoose/dio
 ```
 
-## Usage
+## Quick Start
 
-1. Create your .env files, like:
+### 1. Create your .env files
+
+Create environment-specific files:
 
 ```bash
 .env.development
-.env.josephjostar
+.env.staging
 .env.production
 ```
 
-1. Import `Dio` and read environment.
+### 2. Basic Usage
 
 ```go
 package main
 
 import (
+ "flag"
  "fmt"
+ "log"
+
  "github.com/catgoose/dio"
 )
 
 func main() {
- // Set your own flags
  flag.Parse()
 
- // Dio loads the environment based on the flag passed
- // (e.g., `-env=production,-env development`)
- // Default mode is `development`
+ // Initialize environment - exits if .env.{mode} doesn't exist
+ if err := dio.InitEnvironment(); err != nil {
+  log.Fatalf("Failed to initialize environment: %v", err)
+ }
 
- // If .env.{mode} is not found, .env will be loaded as fallback
-
- // Initialize environment after parsing flags
- // requires calling flag.Parse() first
- dio.InitEnvironment()
-
- // By default dio looks for %s.env
- // Set new pattern with SetEnvFilePattern
- dio.SetEnvFilePattern(".%s")
-
- // By default dio prints environment mode
- // Set to false with SetPrintEnvMode
- dio.SetPrintEnvMode(false)
-
- // Optional initialize environment with env string instead of using -env
- // Does not require to call flag.Parse()
- dio.InitEnvironmentWithEnv("development")
-
- fmt.Println("Current environment:", dio.Name())
+ fmt.Printf("Running in %s mode\n", dio.Name())
 
  // Access environment variables
- dbUser := dio.Env("DB_USER")
- fmt.Println("Database User:", dbUser)
+ port := dio.EnvWithDefault("PORT", "8080")
+ dbHost := dio.EnvWithDefault("DB_HOST", "localhost")
 
- // log.Fatalf if not found
- database := dio.MustEnv("DATABASE")
- fmt.Println("Database:", dabase)
-
- // Get environment name
- fmt.Printf("Environment %s", dio.Name())
-
- // Check environment
- if dio.Dev() {
-  fmt.Println("We are in development mode.")
- }
- if dio.Prod() {
-  fmt.Println("We are in production mode.")
- }
+ fmt.Printf("Server will run on port %s\n", port)
+ fmt.Printf("Database host: %s\n", dbHost)
 }
 ```
 
-1. Set environment from commandline flag
+### 3. Run with environment flag
 
 ```bash
 go run main.go -env=production
 go run main.go -env production
 ```
 
-### Environment
+## API Reference
 
-To disable printing `Environment: ...` set environment variable `DIO_PRINT_ENV=false`
+### Environment Initialization
+
+#### `InitEnvironment() error`
+
+Initializes the environment using the `-env` flag. Must be called after `flag.Parse()`.
+
+```go
+flag.Parse()
+if err := dio.InitEnvironment(); err != nil {
+ log.Fatalf("Configuration error: %v", err)
+}
+```
+
+#### `InitEnvironmentWithEnv(env string) error`
+
+Initializes the environment with a specific environment name.
+
+```go
+if err := dio.InitEnvironmentWithEnv("staging"); err != nil {
+ log.Fatalf("Failed to load staging environment: %v", err)
+}
+```
+
+### Environment Variable Access
+
+#### `Env(key string, fallback ...string) (string, error)`
+
+Retrieves an environment variable with optional fallback. Returns error if not set and no fallback provided.
+
+```go
+// With fallback
+value, err := dio.Env("DB_HOST", "localhost")
+if err != nil {
+ // This won't happen because we provided a fallback
+}
+
+// Without fallback
+apiKey, err := dio.Env("API_KEY")
+if err != nil {
+ log.Printf("API_KEY is required: %v", err)
+}
+```
+
+#### `MustEnv(key string) (string, error)`
+
+Retrieves a required environment variable. Returns error if not set.
+
+```go
+port, err := dio.MustEnv("PORT")
+if err != nil {
+ log.Fatalf("PORT is required: %v", err)
+}
+```
+
+#### `EnvWithDefault(key, defaultValue string) string`
+
+Convenience function that returns a default value if the environment variable is not set.
+
+```go
+port := dio.EnvWithDefault("PORT", "8080")
+debug := dio.EnvWithDefault("DEBUG", "false")
+```
+
+### Environment Information
+
+#### `Name() string`
+
+Returns the current environment name.
+
+```go
+fmt.Printf("Current environment: %s\n", dio.Name())
+```
+
+#### `Dev() bool`
+
+Checks if the current environment is development.
+
+```go
+if dio.Dev() {
+ fmt.Println("Running in development mode")
+}
+```
+
+#### `Prod() bool`
+
+Checks if the current environment is production.
+
+```go
+if dio.Prod() {
+ fmt.Println("Running in production mode")
+}
+```
+
+### Configuration
+
+#### `SetEnvFilePattern(pattern string)`
+
+Sets the pattern for environment files. Default is `.env.%s`.
+
+```go
+dio.SetEnvFilePattern(".env.%s") // .env.development
+dio.SetEnvFilePattern(".%s.env") // .development.env
+```
+
+#### `SetPrintEnvMode(enabled bool)`
+
+Controls whether to print the environment mode on initialization.
+
+```go
+dio.SetPrintEnvMode(false) // Disable environment printing
+```
+
+## Error Handling
+
+Dio provides consistent error handling with specific error types:
+
+### Error Types
+
+```go
+// Check for specific error types
+if dio.IsEnvVarNotSetError(err) {
+ fmt.Println("Environment variable is not set")
+}
+
+if dio.IsEnvFileNotFoundError(err) {
+ fmt.Println("Environment file not found")
+}
+
+if dio.IsInvalidEnvModeError(err) {
+ fmt.Println("Invalid environment mode")
+}
+```
+
+### Error Handling Patterns
+
+#### Fail-Fast (Recommended for Applications)
+
+```go
+func main() {
+ if err := dio.InitEnvironment(); err != nil {
+  log.Fatalf("Configuration error: %v", err)
+ }
+
+ port, err := dio.MustEnv("PORT")
+ if err != nil {
+  log.Fatalf("Required env var missing: %v", err)
+ }
+}
+```
+
+#### Graceful Handling (For Libraries)
+
+```go
+func LoadConfig() (*Config, error) {
+ if err := dio.InitEnvironment(); err != nil {
+  return nil, fmt.Errorf("failed to initialize environment: %w", err)
+ }
+
+ port, err := dio.MustEnv("PORT")
+ if err != nil {
+  return nil, fmt.Errorf("failed to load config: %w", err)
+ }
+
+ return &Config{Port: port}, nil
+}
+```
+
+## Examples
+
+### Web Server Configuration
+
+```go
+package main
+
+import (
+ "flag"
+ "fmt"
+ "log"
+ "net/http"
+
+ "github.com/catgoose/dio"
+)
+
+func main() {
+ flag.Parse()
+
+ if err := dio.InitEnvironment(); err != nil {
+  log.Fatalf("Failed to initialize environment: %v", err)
+ }
+
+ port := dio.EnvWithDefault("PORT", "8080")
+ host := dio.EnvWithDefault("HOST", "0.0.0.0")
+
+ addr := fmt.Sprintf("%s:%s", host, port)
+ fmt.Printf("Starting server on %s in %s mode\n", addr, dio.Name())
+
+ http.ListenAndServe(addr, nil)
+}
+```
+
+### Database Configuration
+
+```go
+func LoadDBConfig() (*DBConfig, error) {
+ config := &DBConfig{}
+
+ // Required variables
+ host, err := dio.MustEnv("DB_HOST")
+ if err != nil {
+  return nil, fmt.Errorf("database host required: %w", err)
+ }
+ config.Host = host
+
+ // Optional with defaults
+ config.Port = dio.EnvWithDefault("DB_PORT", "5432")
+ config.Database = dio.EnvWithDefault("DB_NAME", "myapp")
+ config.SSLMode = dio.EnvWithDefault("DB_SSL_MODE", "disable")
+
+ return config, nil
+}
+```
+
+### Environment-Specific Behavior
+
+```go
+func setupLogging() {
+ if dio.Dev() {
+  // Development: verbose logging
+  log.SetLevel(log.DebugLevel)
+ } else if dio.Prod() {
+  // Production: minimal logging
+  log.SetLevel(log.WarnLevel)
+ } else {
+  // Other environments: info level
+  log.SetLevel(log.InfoLevel)
+ }
+}
+```
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
