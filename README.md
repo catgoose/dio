@@ -24,6 +24,7 @@
       - [`Name() string`](#name-string)
       - [`Dev() bool`](#dev-bool)
       - [`Prod() bool`](#prod-bool)
+      - [`Uat() bool`](#uat-bool)
     - [Configuration](#configuration)
       - [`SetEnvFilePattern(pattern string)`](#setenvfilepatternpattern-string)
       - [`SetPrintEnvMode(enabled bool)`](#setprintenvmodeenabled-bool)
@@ -65,6 +66,7 @@ Create environment-specific files:
 
 ```bash
 .env.development
+.env.uat
 .env.staging
 .env.production
 ```
@@ -104,6 +106,8 @@ func main() {
 ### 3. Run with environment flag
 
 ```bash
+go run main.go -env=development
+go run main.go -env=uat
 go run main.go -env=production
 go run main.go -env production
 ```
@@ -200,6 +204,16 @@ Checks if the current environment is production.
 ```go
 if dio.Prod() {
  fmt.Println("Running in production mode")
+}
+```
+
+#### `Uat() bool`
+
+Checks if the current environment is UAT (User Acceptance Testing).
+
+```go
+if dio.Uat() {
+ fmt.Println("Running in UAT mode")
 }
 ```
 
@@ -339,6 +353,9 @@ func setupLogging() {
  if dio.Dev() {
   // Development: verbose logging
   log.SetLevel(log.DebugLevel)
+ } else if dio.Uat() {
+  // UAT: detailed logging for testing
+  log.SetLevel(log.InfoLevel)
  } else if dio.Prod() {
   // Production: minimal logging
   log.SetLevel(log.WarnLevel)

@@ -97,6 +97,8 @@ func printEnvMode(mode string) {
 		c := color.New(color.FgBlue)
 		if mode == "production" || mode == "prod" {
 			c = color.New(color.FgRed)
+		} else if mode == "uat" {
+			c = color.New(color.FgYellow)
 		}
 		_, err := c.Printf("Environment: %s\n", mode)
 		if err != nil {
@@ -146,6 +148,11 @@ func Dev() bool {
 // Prod checks if the current environment is production
 func Prod() bool {
 	return EnvFlag == "production" || EnvFlag == "prod"
+}
+
+// Uat checks if the current environment is UAT (User Acceptance Testing)
+func Uat() bool {
+	return EnvFlag == "uat"
 }
 
 // IsEnvVarNotSetError checks if the error is an environment variable not set error
