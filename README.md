@@ -14,11 +14,12 @@
     - [3. Run with environment flag](#3-run-with-environment-flag)
   - [API Reference](#api-reference)
     - [Environment Initialization](#environment-initialization)
-      - [`InitEnvironment() error`](#initenvironment-error)
-      - [`InitEnvironmentWithEnv(env string) error`](#initenvironmentwithenvenv-string-error)
+      - [`InitEnvironment(opts *Options) error`](#initenvironmentopts-options-error)
+      - [`InitEnvironmentWithEnv(env string, opts *Options) error`](#initenvironmentwithenvenv-string-opts-options-error)
+      - [`Options`](#options)
     - [Environment Variable Access](#environment-variable-access)
       - [`Env(key string, fallback ...string) (string, error)`](#envkey-string-fallback-string-string-error)
-      - [`MustEnv(key string) (string, error)`](#mustenvkey-string-string-error)
+      - [`RequiredEnv(key string) (string, error)`](#requiredenvkey-string-string-error)
       - [`EnvWithDefault(key, defaultValue string) string`](#envwithdefaultkey-defaultvalue-string-string)
     - [Environment Information](#environment-information)
       - [`Name() string`](#name-string)
@@ -26,8 +27,6 @@
       - [`Prod() bool`](#prod-bool)
       - [`Uat() bool`](#uat-bool)
     - [Configuration](#configuration)
-      - [`SetEnvFilePattern(pattern string)`](#setenvfilepatternpattern-string)
-      - [`SetPrintEnvMode(enabled bool)`](#setprintenvmodeenabled-bool)
   - [Error Handling](#error-handling)
     - [Error Types](#error-types)
     - [Error Handling Patterns](#error-handling-patterns)
@@ -88,7 +87,7 @@ func main() {
  flag.Parse()
 
  // Initialize environment - exits if .env.{mode} doesn't exist
- if err := dio.InitEnvironment(); err != nil {
+ if err := dio.InitEnvironment(nil); err != nil {
   log.Fatalf("Failed to initialize environment: %v", err)
  }
 
@@ -116,24 +115,38 @@ go run main.go -env production
 
 ### Environment Initialization
 
-#### `InitEnvironment() error`
+#### `InitEnvironment(opts *Options) error`
 
-Initializes the environment using the `-env` flag. Must be called after `flag.Parse()`.
+Initializes the environment using the `-env` flag. Must be called after `flag.Parse()`. opts may be nil for defaults.
 
 ```go
 flag.Parse()
-if err := dio.InitEnvironment(); err != nil {
+if err := dio.InitEnvironment(nil); err != nil {
  log.Fatalf("Configuration error: %v", err)
 }
 ```
 
-#### `InitEnvironmentWithEnv(env string) error`
+#### `InitEnvironmentWithEnv(env string, opts *Options) error`
 
-Initializes the environment with a specific environment name.
+Initializes the environment with a specific environment name. opts may be nil for defaults.
 
 ```go
-if err := dio.InitEnvironmentWithEnv("staging"); err != nil {
+if err := dio.InitEnvironmentWithEnv("staging", nil); err != nil {
  log.Fatalf("Failed to load staging environment: %v", err)
+}
+```
+
+#### `Options`
+
+Options configures initialization. Nil means defaults: file pattern ".env.%s", PrintMode true.
+
+- **Env** – override env (InitEnvironment only; when non-empty overrides the `-env` flag)
+- **FilePattern** – env file pattern (e.g. `.env.%s`); empty means use default
+- **PrintMode** – whether to print the environment mode on init
+
+```go
+if err := dio.InitEnvironmentWithEnv("production", &dio.Options{FilePattern: ".env.%s", PrintMode: false}); err != nil {
+ log.Fatal(err)
 }
 ```
 
@@ -157,12 +170,12 @@ if err != nil {
 }
 ```
 
-#### `MustEnv(key string) (string, error)`
+#### `RequiredEnv(key string) (string, error)`
 
 Retrieves a required environment variable. Returns error if not set.
 
 ```go
-port, err := dio.MustEnv("PORT")
+port, err := dio.RequiredEnv("PORT")
 if err != nil {
  log.Fatalf("PORT is required: %v", err)
 }
@@ -219,22 +232,7 @@ if dio.Uat() {
 
 ### Configuration
 
-#### `SetEnvFilePattern(pattern string)`
-
-Sets the pattern for environment files. Default is `.env.%s`.
-
-```go
-dio.SetEnvFilePattern(".env.%s") // .env.development
-dio.SetEnvFilePattern(".%s.env") // .development.env
-```
-
-#### `SetPrintEnvMode(enabled bool)`
-
-Controls whether to print the environment mode on initialization.
-
-```go
-dio.SetPrintEnvMode(false) // Disable environment printing
-```
+Configuration is done via [Options](#options) when calling InitEnvironment or InitEnvironmentWithEnv.
 
 ## Error Handling
 
@@ -263,11 +261,11 @@ if dio.IsInvalidEnvModeError(err) {
 
 ```go
 func main() {
- if err := dio.InitEnvironment(); err != nil {
+ if err := dio.InitEnvironment(nil); err != nil {
   log.Fatalf("Configuration error: %v", err)
  }
 
- port, err := dio.MustEnv("PORT")
+ port, err := dio.RequiredEnv("PORT")
  if err != nil {
   log.Fatalf("Required env var missing: %v", err)
  }
@@ -278,11 +276,11 @@ func main() {
 
 ```go
 func LoadConfig() (*Config, error) {
- if err := dio.InitEnvironment(); err != nil {
+ if err := dio.InitEnvironment(nil); err != nil {
   return nil, fmt.Errorf("failed to initialize environment: %w", err)
  }
 
- port, err := dio.MustEnv("PORT")
+ port, err := dio.RequiredEnv("PORT")
  if err != nil {
   return nil, fmt.Errorf("failed to load config: %w", err)
  }
@@ -310,7 +308,7 @@ import (
 func main() {
  flag.Parse()
 
- if err := dio.InitEnvironment(); err != nil {
+ if err := dio.InitEnvironment(nil); err != nil {
   log.Fatalf("Failed to initialize environment: %v", err)
  }
 
@@ -331,7 +329,7 @@ func LoadDBConfig() (*DBConfig, error) {
  config := &DBConfig{}
 
  // Required variables
- host, err := dio.MustEnv("DB_HOST")
+ host, err := dio.RequiredEnv("DB_HOST")
  if err != nil {
   return nil, fmt.Errorf("database host required: %w", err)
  }
