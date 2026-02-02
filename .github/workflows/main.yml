@@ -31,7 +31,8 @@ jobs:
       - name: Build and test (original)
         run: |
           go build -v ./...
-          go test -v ./...
+          go test -v -coverprofile=coverage.out ./...
+          go tool cover -func=coverage.out
 
       - name: Save go.mod and go.sum
         run: |
@@ -61,7 +62,8 @@ jobs:
       - name: Build and test (updated)
         run: |
           go build -v ./...
-          go test -v ./...
+          go test -v -coverprofile=coverage.out ./...
+          go tool cover -func=coverage.out
 
       - name: Check for dependency changes
         id: check-deps
