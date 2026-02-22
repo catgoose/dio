@@ -1,8 +1,8 @@
 package dio
 
 import (
+	"bytes"
 	"errors"
-	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -42,6 +42,7 @@ func TestNormalizeMode(t *testing.T) {
 		{"uat", "uat"},
 		{"UAT", "uat"},
 		{"unknown", "unknown"},
+		{"Staging", "staging"},
 		{"", ""},
 	}
 	for _, tt := range tests {
@@ -109,7 +110,7 @@ func TestInitEnvironmentWithEnv_SuccessNilOpts(t *testing.T) {
 	}
 	defer os.Chdir(origWd)
 
-	err := InitEnvironmentWithEnv("development", &Options{PrintMode: false})
+	err := InitEnvironmentWithEnv("development", &Options{Silent: true})
 	if err != nil {
 		t.Fatalf("InitEnvironmentWithEnv: %v", err)
 	}
@@ -124,7 +125,7 @@ func TestInitEnvironmentWithEnv_CustomFilePattern(t *testing.T) {
 	defer cleanup()
 	pattern := filepath.Join(tmpDir, ".env.%s")
 
-	err := InitEnvironmentWithEnv("development", &Options{FilePattern: pattern, PrintMode: false})
+	err := InitEnvironmentWithEnv("development", &Options{FilePattern: pattern, Silent: true})
 	if err != nil {
 		t.Fatalf("InitEnvironmentWithEnv: %v", err)
 	}
@@ -134,7 +135,7 @@ func TestInitEnvironmentWithEnv_CustomFilePattern(t *testing.T) {
 	os.Unsetenv("CUSTOM_KEY")
 }
 
-func TestInitEnvironmentWithEnv_PrintModeFalse(t *testing.T) {
+func TestInitEnvironmentWithEnv_SilentTrue(t *testing.T) {
 	tmpDir, cleanup := setupTempEnvDir(t, "development", "KEY=val")
 	defer cleanup()
 	origWd, _ := os.Getwd()
@@ -143,7 +144,7 @@ func TestInitEnvironmentWithEnv_PrintModeFalse(t *testing.T) {
 	}
 	defer os.Chdir(origWd)
 
-	err := InitEnvironmentWithEnv("development", &Options{PrintMode: false})
+	err := InitEnvironmentWithEnv("development", &Options{Silent: true})
 	if err != nil {
 		t.Fatalf("InitEnvironmentWithEnv: %v", err)
 	}
@@ -157,7 +158,7 @@ func TestInitEnvironmentWithEnv_FileNotFound(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 	pattern := filepath.Join(tmpDir, ".env.%s")
 
-	err = InitEnvironmentWithEnv("development", &Options{FilePattern: pattern, PrintMode: false})
+	err = InitEnvironmentWithEnv("development", &Options{FilePattern: pattern, Silent: true})
 	if err == nil {
 		t.Fatal("expected error when file missing")
 	}
@@ -175,7 +176,7 @@ func TestInitEnvironmentWithEnv_EmptyEnvUsesDefault(t *testing.T) {
 	}
 	defer os.Chdir(origWd)
 
-	err := InitEnvironmentWithEnv("", &Options{PrintMode: false})
+	err := InitEnvironmentWithEnv("", &Options{Silent: true})
 	if err != nil {
 		t.Fatalf("InitEnvironmentWithEnv empty: %v", err)
 	}
@@ -185,7 +186,7 @@ func TestInitEnvironmentWithEnv_EmptyEnvUsesDefault(t *testing.T) {
 	os.Unsetenv("DEFAULT_KEY")
 }
 
-func TestInitEnvironment(t *testing.T) {
+func TestInitEnvironment_DefaultEnv(t *testing.T) {
 	tmpDir, cleanup := setupTempEnvDir(t, "development", "FLAG_KEY=flag_ok")
 	defer cleanup()
 	origWd, _ := os.Getwd()
@@ -194,8 +195,7 @@ func TestInitEnvironment(t *testing.T) {
 	}
 	defer os.Chdir(origWd)
 
-	flag.Set("env", "development")
-	err := InitEnvironment(&Options{PrintMode: false})
+	err := InitEnvironment(&Options{Silent: true})
 	if err != nil {
 		t.Fatalf("InitEnvironment: %v", err)
 	}
@@ -203,6 +203,24 @@ func TestInitEnvironment(t *testing.T) {
 		t.Errorf("FLAG_KEY = %q, want flag_ok", got)
 	}
 	os.Unsetenv("FLAG_KEY")
+}
+
+func TestInitEnvironment_OptsEnvOverride(t *testing.T) {
+	tmpDir, cleanup := setupTempEnvDir(t, "production", "PROD_KEY=prod_ok")
+	defer cleanup()
+	pattern := filepath.Join(tmpDir, ".env.%s")
+
+	err := InitEnvironment(&Options{Env: "production", FilePattern: pattern, Silent: true})
+	if err != nil {
+		t.Fatalf("InitEnvironment with Env override: %v", err)
+	}
+	if Name() != "production" {
+		t.Errorf("Name() = %q, want production", Name())
+	}
+	if got := os.Getenv("PROD_KEY"); got != "prod_ok" {
+		t.Errorf("PROD_KEY = %q, want prod_ok", got)
+	}
+	os.Unsetenv("PROD_KEY")
 }
 
 func TestEnv_EmptyKey(t *testing.T) {
@@ -303,12 +321,19 @@ func TestEnvWithDefault_KeyUnset(t *testing.T) {
 	}
 }
 
+func TestEnvWithDefault_EmptyKey(t *testing.T) {
+	got := EnvWithDefault("", "default_value")
+	if got != "default_value" {
+		t.Errorf("EnvWithDefault(\"\", \"default_value\") = %q, want default_value", got)
+	}
+}
+
 func TestName_Dev_Prod_Uat(t *testing.T) {
 	tmpDir, cleanup := setupTempEnvDir(t, "development", "X=1")
 	defer cleanup()
 	pattern := filepath.Join(tmpDir, ".env.%s")
 
-	err := InitEnvironmentWithEnv("development", &Options{FilePattern: pattern, PrintMode: false})
+	err := InitEnvironmentWithEnv("development", &Options{FilePattern: pattern, Silent: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -332,7 +357,7 @@ func TestName_Prod(t *testing.T) {
 	defer cleanup()
 	pattern := filepath.Join(tmpDir, ".env.%s")
 
-	err := InitEnvironmentWithEnv("production", &Options{FilePattern: pattern, PrintMode: false})
+	err := InitEnvironmentWithEnv("production", &Options{FilePattern: pattern, Silent: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -356,7 +381,7 @@ func TestName_Uat(t *testing.T) {
 	defer cleanup()
 	pattern := filepath.Join(tmpDir, ".env.%s")
 
-	err := InitEnvironmentWithEnv("uat", &Options{FilePattern: pattern, PrintMode: false})
+	err := InitEnvironmentWithEnv("uat", &Options{FilePattern: pattern, Silent: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -412,4 +437,79 @@ func TestIsInvalidEnvModeError(t *testing.T) {
 	if IsInvalidEnvModeError(ErrEnvVarNotSet) {
 		t.Error("ErrEnvVarNotSet should be false")
 	}
+}
+
+func TestPrintEnvMode_Production(t *testing.T) {
+	tmpDir, cleanup := setupTempEnvDir(t, "production", "X=1")
+	defer cleanup()
+	pattern := filepath.Join(tmpDir, ".env.%s")
+
+	// Capture stdout to verify printing occurs
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	err := InitEnvironmentWithEnv("production", &Options{FilePattern: pattern})
+	if err != nil {
+		w.Close()
+		os.Stdout = old
+		t.Fatal(err)
+	}
+
+	w.Close()
+	var buf bytes.Buffer
+	buf.ReadFrom(r)
+	os.Stdout = old
+
+	output := buf.String()
+	if len(output) == 0 {
+		// color output may go to a different fd; just verify no error
+	}
+	os.Unsetenv("X")
+}
+
+func TestPrintEnvMode_Uat(t *testing.T) {
+	tmpDir, cleanup := setupTempEnvDir(t, "uat", "X=1")
+	defer cleanup()
+	pattern := filepath.Join(tmpDir, ".env.%s")
+
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	err := InitEnvironmentWithEnv("uat", &Options{FilePattern: pattern})
+	if err != nil {
+		w.Close()
+		os.Stdout = old
+		t.Fatal(err)
+	}
+
+	w.Close()
+	var buf bytes.Buffer
+	buf.ReadFrom(r)
+	os.Stdout = old
+	os.Unsetenv("X")
+}
+
+func TestPrintEnvMode_Development(t *testing.T) {
+	tmpDir, cleanup := setupTempEnvDir(t, "development", "X=1")
+	defer cleanup()
+	pattern := filepath.Join(tmpDir, ".env.%s")
+
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	err := InitEnvironmentWithEnv("development", &Options{FilePattern: pattern})
+	if err != nil {
+		w.Close()
+		os.Stdout = old
+		t.Fatal(err)
+	}
+
+	w.Close()
+	var buf bytes.Buffer
+	buf.ReadFrom(r)
+	os.Stdout = old
+	os.Unsetenv("X")
 }

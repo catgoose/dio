@@ -8,7 +8,6 @@ package dio
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"os"
 	"strings"
@@ -24,18 +23,24 @@ var (
 )
 
 var (
-	envFlag       = flag.String("env", "development", "Set the application environment (reads environment from .env.{mode})")
-	EnvFlag       string
+	envName       string
 	canonicalMode string
 )
 
 const defaultEnv = "development"
 
-// Options configures init. Nil means defaults.
+// Options configures environment initialization. Nil means defaults
+// (development mode, default file pattern, printing enabled).
 type Options struct {
-	Env         string
+	// Env overrides the environment mode (e.g. "production", "uat").
+	// Defaults to "development" if empty.
+	Env string
+	// FilePattern is the sprintf pattern for the env file (e.g. ".env.%s").
+	// Defaults to ".env.%s" if empty.
 	FilePattern string
-	PrintMode   bool
+	// Silent suppresses printing the environment mode at startup.
+	// The zero value (false) means printing is enabled, matching nil opts behavior.
+	Silent bool
 }
 
 const defaultFilePattern = ".env.%s"
@@ -44,14 +49,14 @@ func initEnv(env string, opts *Options) error {
 	if env == "" {
 		env = defaultEnv
 	}
-	EnvFlag = env
+	envName = env
 	pattern := defaultFilePattern
 	printMode := true
 	if opts != nil {
 		if opts.FilePattern != "" {
 			pattern = opts.FilePattern
 		}
-		printMode = opts.PrintMode
+		printMode = !opts.Silent
 	}
 	if err := loadEnvFile(env, pattern); err != nil {
 		return fmt.Errorf("failed to load environment: %w", err)
@@ -61,16 +66,18 @@ func initEnv(env string, opts *Options) error {
 	return nil
 }
 
-// InitEnvironment initializes from the -env flag. opts may be nil for defaults.
+// InitEnvironment initializes the environment using opts.Env or the default
+// environment ("development"). opts may be nil for defaults.
 func InitEnvironment(opts *Options) error {
-	env := *envFlag
+	env := defaultEnv
 	if opts != nil && opts.Env != "" {
 		env = opts.Env
 	}
 	return initEnv(env, opts)
 }
 
-// InitEnvironmentWithEnv initializes with the given env. opts may be nil for defaults.
+// InitEnvironmentWithEnv initializes the environment with the given mode.
+// opts may be nil for defaults.
 func InitEnvironmentWithEnv(env string, opts *Options) error {
 	return initEnv(env, opts)
 }
@@ -84,7 +91,7 @@ func normalizeMode(mode string) string {
 	case "production", "development", "uat":
 		return strings.ToLower(mode)
 	default:
-		return mode
+		return strings.ToLower(mode)
 	}
 }
 
@@ -124,6 +131,9 @@ func printEnvMode(mode string, print bool) {
 	}
 }
 
+// Env retrieves the value of the environment variable named by key.
+// If the variable is not set, it returns the first fallback value if provided,
+// or an ErrEnvVarNotSet error if no fallback is given.
 func Env(key string, fallback ...string) (string, error) {
 	if key == "" {
 		return "", fmt.Errorf("%w: key cannot be empty", ErrEnvVarNotSet)
@@ -139,6 +149,8 @@ func Env(key string, fallback ...string) (string, error) {
 	return "", fmt.Errorf("%w: %s", ErrEnvVarNotSet, key)
 }
 
+// RequiredEnv retrieves the value of the environment variable named by key.
+// It returns an ErrEnvVarNotSet error if the variable is not set or empty.
 func RequiredEnv(key string) (string, error) {
 	value := os.Getenv(key)
 	if value == "" {
@@ -147,38 +159,47 @@ func RequiredEnv(key string) (string, error) {
 	return value, nil
 }
 
+// Name returns the current environment mode name as provided during initialization.
 func Name() string {
-	return EnvFlag
+	return envName
 }
 
+// Dev reports whether the current environment is "development".
 func Dev() bool {
 	return canonicalMode == "development"
 }
 
+// Prod reports whether the current environment is "production".
 func Prod() bool {
 	return canonicalMode == "production"
 }
 
+// Uat reports whether the current environment is "uat".
 func Uat() bool {
 	return canonicalMode == "uat"
 }
 
+// IsEnvVarNotSetError reports whether err is or wraps ErrEnvVarNotSet.
 func IsEnvVarNotSetError(err error) bool {
 	return errors.Is(err, ErrEnvVarNotSet)
 }
 
+// IsEnvFileNotFoundError reports whether err is or wraps ErrEnvFileNotFound.
 func IsEnvFileNotFoundError(err error) bool {
 	return errors.Is(err, ErrEnvFileNotFound)
 }
 
+// IsInvalidEnvModeError reports whether err is or wraps ErrInvalidEnvMode.
 func IsInvalidEnvModeError(err error) bool {
 	return errors.Is(err, ErrInvalidEnvMode)
 }
 
+// EnvWithDefault retrieves the value of the environment variable named by key.
+// If the variable is not set or empty, it returns defaultValue.
 func EnvWithDefault(key, defaultValue string) string {
-	v, err := Env(key, defaultValue)
-	if err != nil {
+	if key == "" {
 		return defaultValue
 	}
+	v, _ := Env(key, defaultValue)
 	return v
 }
