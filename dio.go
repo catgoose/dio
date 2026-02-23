@@ -8,6 +8,7 @@ package dio
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"os"
 	"strings"
@@ -21,6 +22,8 @@ var (
 	ErrEnvFileNotFound = errors.New("no environment file found")
 	ErrInvalidEnvMode  = errors.New("invalid environment mode")
 )
+
+var envFlag = flag.String("env", "development", "Set the application environment (reads environment from .env.{mode})")
 
 var (
 	envName       string
@@ -69,7 +72,7 @@ func initEnv(env string, opts *Options) error {
 // InitEnvironment initializes the environment using opts.Env or the default
 // environment ("development"). opts may be nil for defaults.
 func InitEnvironment(opts *Options) error {
-	env := defaultEnv
+	env := *envFlag
 	if opts != nil && opts.Env != "" {
 		env = opts.Env
 	}
