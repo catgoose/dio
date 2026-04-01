@@ -43,6 +43,40 @@ _You thought it was a README, but it was me, Dio._
 
 ![image](https://github.com/catgoose/screenshots/blob/b2cf4ef1674f99e894552af2c5cf654062ba4e37/dio/dio.png)
 
+## Why
+
+**Without dio:**
+
+```go
+dbHost := os.Getenv("DB_HOST")
+if dbHost == "" {
+    dbHost = "localhost" // hope this is right
+}
+dbPass := os.Getenv("DB_PASSWORD") // empty string if missing, no error
+port := os.Getenv("PORT")          // which .env file? who loaded it?
+
+// No env file loading. No mode awareness. No way to know if you're
+// running against production config or a blank environment.
+// Silent failures everywhere.
+```
+
+**With dio:**
+
+```go
+flag.Parse()
+if err := dio.InitEnvironment(nil); err != nil {
+    log.Fatalf("Configuration error: %v", err) // fails if .env.{mode} missing
+}
+// go run main.go -env=production  -->  loads .env.production
+
+dbHost, err := dio.RequiredEnv("DB_HOST") // error if not set
+port := dio.EnvWithDefault("PORT", "8080")
+
+if dio.Prod() {
+    log.Println("Running in production mode")
+}
+```
+
 ## About
 
 Dio is a Go package that provides environment management utilities for applications. It loads `.env.{mode}` environment files using [godotenv](https://github.com/joho/godotenv) and follows a fail-fast approach - the application will exit if the specified environment file doesn't exist, preventing accidental deployment to the wrong environment.
