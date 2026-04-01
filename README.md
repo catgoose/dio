@@ -412,6 +412,37 @@ func setupLogging() {
 >
 > -- The Wisdom of the Uniform Interface
 
+## Architecture
+
+### Where dio fits in the dothog ecosystem
+
+```
+                        ┌──────────────────────────────────────┐
+                        │              dothog app              │
+                        └──────────┬───────────────────────────┘
+                                   │
+               ┌───────────────────┼───────────────────┐
+               │                   │                   │
+          ┌────v────┐         ┌────v────┐         ┌────v────┐
+          │  *dio*  │         │ config  │         │  libs   │
+          │ env/cfg │────────►│ struct  │────────►│ crooner │
+          └─────────┘         └─────────┘         │ fraggle │
+               │                                  │ porter  │
+               │ reads .env.{mode}                │  ...    │
+               v                                  └─────────┘
+          ┌─────────┐
+          │ .env.dev│
+          │.env.prod│
+          │.env.test│
+          └─────────┘
+```
+
+Dio is the first thing that runs. It loads environment variables from
+`.env.{mode}` files, determines which environment the app is running in,
+and exposes predicates (`Dev()`, `Prod()`, etc.) that the rest of the app
+uses to configure behavior. Every other library in the ecosystem reads
+its configuration from environment variables that dio loaded.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
