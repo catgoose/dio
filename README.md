@@ -81,7 +81,7 @@ if dio.Prod() {
 
 > Each request from client to server must contain ALL of the information necessary to understand the request.
 >
-> -- The Wisdom of the Uniform Interface, Dothog Manifesto
+> -- The Wisdom of the Uniform Interface
 
 The environment IS that information. Dio is a Go package that provides environment management utilities for applications. It loads `.env.{mode}` environment files using [godotenv](https://github.com/joho/godotenv) and follows a fail-fast approach - the application will exit if the specified environment file doesn't exist, preventing accidental deployment to the wrong environment.
 
@@ -297,7 +297,7 @@ if dio.IsInvalidEnvModeError(err) {
 
 > Student lean forward. "what is the magic word?" Grug say: "no."
 >
-> -- Layman Grug, Dothog Manifesto
+> -- Layman Grug
 
 Dio says "no" to missing env vars. Loudly, at startup, before anything else goes wrong.
 
@@ -410,7 +410,7 @@ func setupLogging() {
 
 > THE FOOL said: "That seems too simple." Yes. That is the point.
 >
-> -- The Wisdom of the Uniform Interface, Dothog Manifesto
+> -- The Wisdom of the Uniform Interface
 
 ## License
 
