@@ -414,34 +414,33 @@ func setupLogging() {
 
 ## Architecture
 
-### Where dio fits in the dothog ecosystem
-
 ```
-                        ┌──────────────────────────────────────┐
-                        │              dothog app              │
-                        └──────────┬───────────────────────────┘
-                                   │
-               ┌───────────────────┼───────────────────┐
-               │                   │                   │
-          ┌────v────┐         ┌────v────┐         ┌────v────┐
-          │  *dio*  │         │ config  │         │  libs   │
-          │ env/cfg │────────►│ struct  │────────►│ crooner │
-          └─────────┘         └─────────┘         │ fraggle │
-               │                                  │ porter  │
-               │ reads .env.{mode}                │  ...    │
-               v                                  └─────────┘
-          ┌─────────┐
-          │ .env.dev│
-          │.env.prod│
-          │.env.test│
-          └─────────┘
+  ┌─────────────────────────────┐
+  │         main()              │
+  │                             │
+  │  dio.InitEnvironment()      │
+  └──────────┬──────────────────┘
+             │
+             v
+  ┌─────────────────────────────┐
+  │           dio               │
+  │                             │
+  │  -env flag ──► mode         │
+  │  .env.{mode} ──► os.Setenv │
+  │                             │
+  │  Dev()  Prod()  Test()      │
+  │  Staging()  Uat()           │
+  └──────────┬──────────────────┘
+             │ environment loaded
+             v
+  ┌─────────────────────────────┐
+  │   rest of the application   │
+  │   reads os.Getenv / dio.*() │
+  └─────────────────────────────┘
 ```
 
-Dio is the first thing that runs. It loads environment variables from
-`.env.{mode}` files, determines which environment the app is running in,
-and exposes predicates (`Dev()`, `Prod()`, etc.) that the rest of the app
-uses to configure behavior. Every other library in the ecosystem reads
-its configuration from environment variables that dio loaded.
+Dio runs first. It reads the `-env` flag, loads the matching `.env.{mode}`
+file, and exposes predicates for the rest of the app to branch on.
 
 ## License
 
